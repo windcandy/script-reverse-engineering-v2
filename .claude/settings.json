@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import pytrends; import googleapiclient; import requests; print\\('핵심 패키지 OK'\\)\")",
+      "Bash(python3 -c \"from google.oauth2.credentials import Credentials; from google.auth.transport.requests import Request; from googleapiclient.http import MediaFileUpload; import pytz; print\\('YouTube OAuth 패키지 OK'\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 -c \"from google_auth_oauthlib.flow import InstalledAppFlow; print\\('google-auth-oauthlib 패키지 OK'\\)\")",
+      "WebFetch(domain:namu.wiki)",
+      "WebFetch(domain:kr.noxinfluencer.com)",
+      "WebFetch(domain:m.podbbang.com)",
+      "Bash(curl -s \"https://www.youtube.com/results?search_query=%EC%A7%80%EC%8B%9D%ED%95%B4%EC%A0%81%EB%8B%A8+%F0%9F%92%80&sp=CAMSAhAB\")",
+      "Bash(grep -oE '\"text\":\"[^\"]{10,80}\"')",
+      "Bash(~/.local/bin/yt-dlp --flat-playlist --print \"%\\(title\\)s ||| %\\(view_count\\)s ||| %\\(duration\\)s ||| %\\(id\\)s\" \"https://www.youtube.com/@studio_pirates/videos\" --playlist-items 1-100 --match-filter \"duration > 600\")",
+      "Bash(~/.local/bin/yt-dlp --flat-playlist --print \"%\\(title\\)s ||| %\\(view_count\\)s ||| %\\(id\\)s\" \"https://www.youtube.com/@studio_pirates/videos\" --playlist-items 1-80)",
+      "Bash(~/.local/bin/yt-dlp --flat-playlist --print title \"https://www.youtube.com/@studio_pirates/videos\")",
+      "Bash(python3 -m yt_dlp --flat-playlist --print title \"https://www.youtube.com/@studio_pirates/videos\")",
+      "Bash(python3 /tmp/analyze_scripts.py)",
+      "Bash(python3 -c ' *)",
+      "Bash(ls \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/\"*분석*)",
+      "Bash(awk '/^### 0\\\\.6/,/^###[^0]/' \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/지침/00_공통_원칙.md\")"
+    ],
+    "additionalDirectories": [
+      "/Users/hyungilnam/.claude",
+      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본 - 분석",
+      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/00_지식파일"
+    ]
+  }
+}

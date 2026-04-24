@@ -8,10 +8,10 @@ from googleapiclient.http import MediaFileUpload
 
 # 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-API_DIR = os.path.join(BASE_DIR, "API")
-MEDIA_DIR = os.path.join(BASE_DIR, "01_영상, 썸네일")
+API_DIR = os.path.join(BASE_DIR, "..", "API")
+MEDIA_DIR = os.path.join(BASE_DIR, "..", "01_영상, 썸네일")
 TOKEN_FILE = os.path.join(API_DIR, "youtube_token.json")
-CLIENT_SECRET_FILE = os.path.join(API_DIR, "client_secret_250672933888-dpgigh74j00grc8anikl5b7ut9scvj7i.apps.googleusercontent.com.json")
+CLIENT_SECRET_FILE = os.path.join(API_DIR, "client_secret_562871393369-avevlk1fiss268uuodjkh4ifdv4fedkk.apps.googleusercontent.com.json")
 
 
 def get_credentials():
@@ -38,16 +38,19 @@ def get_credentials():
     return creds
 
 
-def upload_video(video_path, title, description, tags, category_id="22", privacy="private", publish_at=None):
+def upload_video(video_path, title, description, tags, category_id="22", privacy="private", publish_at=None, made_for_kids=False, age_restricted=False, ai_generated=False):
     """
-    video_path : 영상 파일 경로
-    title      : 영상 제목
-    description: 영상 설명
-    tags       : 태그 리스트 (예: ["경제", "전세", "부동산"])
-    category_id: 22 = 사람 및 블로그 / 27 = 교육 / 25 = 뉴스
-    privacy    : "private" | "unlisted" | "public"
-    publish_at : 예약 공개 시각 — 문자열로 입력 (예: "2026-04-05 18:00")
-                 입력 시 privacy는 자동으로 "private"으로 설정됨
+    video_path    : 영상 파일 경로
+    title         : 영상 제목
+    description   : 영상 설명
+    tags          : 태그 리스트 (예: ["경제", "전세", "부동산"])
+    category_id   : 22 = 사람 및 블로그 / 27 = 교육 / 25 = 뉴스
+    privacy       : "private" | "unlisted" | "public"
+    publish_at    : 예약 공개 시각 — 문자열로 입력 (예: "2026-04-05 18:00")
+                    입력 시 privacy는 자동으로 "private"으로 설정됨
+    made_for_kids : 아동용 여부 (기본값: False) — selfDeclaredMadeForKids 로 전송
+    age_restricted: 연령 제한 여부 — 18세 이상만 시청 가능 (기본값: False)
+    ai_generated  : AI 생성 콘텐츠 여부 — YouTube 정책상 AI 합성 영상·음성 포함 시 True
     """
     creds = get_credentials()
     youtube = build("youtube", "v3", credentials=creds)
@@ -65,9 +68,15 @@ def upload_video(video_path, title, description, tags, category_id="22", privacy
     else:
         publish_at_rfc = None
 
-    status_body = {"privacyStatus": privacy}
+    status_body = {
+        "privacyStatus": privacy,
+        "selfDeclaredMadeForKids": made_for_kids,
+        "containsSyntheticMedia": ai_generated,  # AI 생성 콘텐츠 여부 (YouTube 정책 공시)
+    }
     if publish_at_rfc:
         status_body["publishAt"] = publish_at_rfc
+
+    content_rating = {"ytRating": "ytAgeRestricted"} if age_restricted else {}
 
     body = {
         "snippet": {
@@ -77,12 +86,15 @@ def upload_video(video_path, title, description, tags, category_id="22", privacy
             "categoryId": category_id,
         },
         "status": status_body,
+        "contentDetails": {
+            "contentRating": content_rating,
+        },
     }
 
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
 
     print(f"업로드 시작: {os.path.basename(video_path)}")
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    request = youtube.videos().insert(part="snippet,status,contentDetails", body=body, media_body=media)
 
     response = None
     while response is None:
@@ -93,6 +105,57 @@ def upload_video(video_path, title, description, tags, category_id="22", privacy
     video_id = response["id"]
     print(f"업로드 완료: https://youtu.be/{video_id}")
     return video_id
+
+
+def post_pinned_comment(video_id, comment_text):
+    """
+    video_id    : 댓글을 달 영상 ID
+    comment_text: 고정할 댓글 내용
+    업로드 직후 자동 호출하면 SEO용 고정 댓글을 세팅할 수 있다.
+    """
+    creds = get_credentials()
+    youtube = build("youtube", "v3", credentials=creds)
+
+    # 댓글 작성
+    response = youtube.commentThreads().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "videoId": video_id,
+                "topLevelComment": {
+                    "snippet": {"textOriginal": comment_text}
+                },
+            }
+        },
+    ).execute()
+
+    comment_id = response["id"]
+
+    # 댓글 고정
+    youtube.comments().setModerationStatus(
+        id=comment_id,
+        moderationStatus="published",
+    ).execute()
+
+    # 핀 고정 (채널 소유자 댓글을 상단 고정)
+    youtube.commentThreads().update(
+        part="snippet",
+        body={
+            "id": comment_id,
+            "snippet": {
+                "videoId": video_id,
+                "topLevelComment": {
+                    "id": response["snippet"]["topLevelComment"]["id"],
+                    "snippet": {"textOriginal": comment_text},
+                },
+                "canReply": True,
+                "isPublic": True,
+            },
+        },
+    ).execute()
+
+    print(f"고정 댓글 등록 완료")
+    return comment_id
 
 
 def set_thumbnail(video_id, thumbnail_path):
@@ -136,6 +199,9 @@ if __name__ == "__main__":
     TAGS = []             # 예: ["전세", "부동산", "경제"]
     PUBLISH_AT = ""       # 직접 지정 시 입력 (예: "2026-04-10 18:00") — 비워두면 WEEKLY 스케줄 적용
                           # WEEKLY_DAY/WEEKLY_TIME 도 비워두면 비공개 업로드
+    PINNED_COMMENT = ""   # 고정 댓글 내용 — 비워두면 댓글 등록 안 함
+    AGE_RESTRICTED = False  # 연령 제한 여부 (18세 이상)
+    AI_GENERATED   = False  # AI 생성 콘텐츠 포함 여부 — AI 합성 영상·음성·이미지 사용 시 True
 
     if VIDEO_FILE:
         video_path = os.path.join(MEDIA_DIR, VIDEO_FILE)
@@ -157,11 +223,14 @@ if __name__ == "__main__":
 
         if PUBLISH_AT:
             print(f"예약 공개 업로드 모드: {PUBLISH_AT} KST")
-            video_id = upload_video(video_path, TITLE, DESCRIPTION, TAGS, publish_at=PUBLISH_AT)
+            video_id = upload_video(video_path, TITLE, DESCRIPTION, TAGS, publish_at=PUBLISH_AT, age_restricted=AGE_RESTRICTED, ai_generated=AI_GENERATED)
         else:
             print("비공개 업로드 모드")
-            video_id = upload_video(video_path, TITLE, DESCRIPTION, TAGS, privacy="private")
+            video_id = upload_video(video_path, TITLE, DESCRIPTION, TAGS, privacy="private", age_restricted=AGE_RESTRICTED, ai_generated=AI_GENERATED)
 
         if THUMBNAIL_FILE:
             thumbnail_path = os.path.join(MEDIA_DIR, THUMBNAIL_FILE)
             set_thumbnail(video_id, thumbnail_path)
+
+        if PINNED_COMMENT:
+            post_pinned_comment(video_id, PINNED_COMMENT)
