@@ -161,7 +161,7 @@ def search_naver(keyword, timeframe=TIMEFRAME):
 def extract_candidates(keyword, youtube_results, trends):
     """
     키워드에서 핵심 대상 후보 3~5개 추출 후 가중치 채점
-    가중치 공식: (한국 관련도×3) + (일상 연결성×2) + (역설 강도×2) + (보편 궁금증×1) + (30~50대 공감도×2)
+    가중치 공식: (한국 관련도×3) + (일상 연결성×2) + (3유형 적합도 최고값×2) + (보편 궁금증×1) + (30~50대 공감도×2)
     Claude가 직접 판단 — 실행 시 콘솔에서 입력받음
     """
     print(f"\n[핵심 대상 추출] '{keyword}' → 후보 입력")
@@ -180,10 +180,10 @@ def extract_candidates(keyword, youtube_results, trends):
         try:
             kr   = int(input("    한국 관련도       (1~5): "))
             life = int(input("    일상 연결성       (1~5): "))
-            rev  = int(input("    역설 강도         (1~5): "))
+            rev  = int(input("    3유형 적합도 최고값 (1~5): "))
             univ = int(input("    보편 궁금증       (1~5): "))
             t30  = int(input("    30~50대 공감도    (1~5): "))
-            paradox_q = input("    역설 질문 한 문장 ('A인데 왜 B인가?' 형식): ").strip()
+            paradox_q = input("    핵심 질문 한 문장 (서사 유형에 맞는 형태): ").strip()
         except ValueError:
             print("    숫자 입력 오류 — 건너뜀")
             continue
@@ -191,10 +191,10 @@ def extract_candidates(keyword, youtube_results, trends):
         score = (kr * 3) + (life * 2) + (rev * 2) + (univ * 1) + (t30 * 2)
         candidates.append({
             "대상": cand,
-            "역설 질문": paradox_q,
+            "핵심 질문": paradox_q,
             "한국 관련도": kr,
             "일상 연결성": life,
-            "역설 강도": rev,
+            "3유형 적합도": rev,
             "보편 궁금증": univ,
             "30~50대 공감도": t30,
             "가중치 점수": score,
@@ -238,13 +238,13 @@ def print_report(keywords, trends, related, youtube_results, naver_results, all_
 
     if all_candidates:
         print("\n【 핵심 대상 후보 — 가중치 순위 】")
-        print(f"  가중치 공식: 한국 관련도×3 + 일상 연결성×2 + 역설 강도×2 + 보편 궁금증×1 + 30~50대 공감도×2")
-        print(f"  {'순위'} {'대상':15} {'점수':>4}  {'역설 질문'}")
+        print(f"  가중치 공식: 한국 관련도×3 + 일상 연결성×2 + 3유형 적합도 최고값×2 + 보편 궁금증×1 + 30~50대 공감도×2")
+        print(f"  {'순위'} {'대상':15} {'점수':>4}  {'핵심 질문'}")
         print("  " + "-"*70)
         medals = ["🥇", "🥈", "🥉"]
         for i, c in enumerate(all_candidates, 1):
             medal = medals[i-1] if i <= 3 else f" {i}."
-            print(f"  {medal} {c['대상']:15} {c['가중치 점수']:>4}점  {c['역설 질문']}")
+            print(f"  {medal} {c['대상']:15} {c['가중치 점수']:>4}점  {c['핵심 질문']}")
         print()
         top = all_candidates[0]
         print(f"  → 추천 주제: [{top['대상']}]  (점수 {top['가중치 점수']}점)")
