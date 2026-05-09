@@ -1,2 +1,6 @@
 API/
 .DS_Store
+지식채널_시드풀.md
+대본/00_떡상스캔/
+scripts/.scanner_cache.json
+scripts/__pycache__/
