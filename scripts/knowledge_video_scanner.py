@@ -38,7 +38,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 API_DIR = os.path.join(PROJECT_ROOT, "API")
 SEED_POOL_PATH = os.path.join(PROJECT_ROOT, "지식채널_시드풀.md")
-REPORTS_DIR = os.path.join(PROJECT_ROOT, "대본", "00_떡상스캔")
+REPORTS_DIR = os.path.join(PROJECT_ROOT, "대본", "00_떡상 썸네일")
+THUMBNAILS_DIR = os.path.join(REPORTS_DIR, "thumbnails")
 CACHE_PATH = os.path.join(BASE_DIR, ".scanner_cache.json")
 
 with open(os.path.join(API_DIR, "youtube_api_key.json")) as f:
@@ -119,6 +120,88 @@ def parse_duration_sec(iso8601):
         return 0
     h, mi, s = (int(x) if x else 0 for x in m.groups())
     return h * 3600 + mi * 60 + s
+
+
+def _days_ago(iso_published):
+    """ISO8601 published_at → 오늘 기준 경과 일수"""
+    try:
+        dt = datetime.fromisoformat(iso_published.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - dt).days
+    except Exception:
+        return -1
+
+
+_FILENAME_FORBIDDEN = re.compile(r'[\\/:*?"<>|\n\r\t]')
+
+
+def sanitize_for_filename(text, max_len=50):
+    """파일명에 안전한 문자열로 변환 (특수문자 제거 + 공백→_ + 길이 제한)"""
+    if not text:
+        return ""
+    cleaned = _FILENAME_FORBIDDEN.sub("", text)
+    cleaned = re.sub(r"\s+", "_", cleaned).strip("_")
+    return cleaned[:max_len]
+
+
+def thumbnail_filename(video_id, title):
+    """제목 + 영상 ID 결합 파일명 (옵션 3)"""
+    safe = sanitize_for_filename(title)
+    return f"{safe}_{video_id}.jpg" if safe else f"{video_id}.jpg"
+
+
+def download_thumbnail(video_id, title=""):
+    """YouTube 썸네일 다운로드 (이미 있으면 스킵). 파일명: 제목_영상ID.jpg"""
+    import requests
+
+    os.makedirs(THUMBNAILS_DIR, exist_ok=True)
+    fname = thumbnail_filename(video_id, title)
+    target = os.path.join(THUMBNAILS_DIR, fname)
+    if os.path.exists(target):
+        return target
+
+    legacy_target = os.path.join(THUMBNAILS_DIR, f"{video_id}.jpg")
+    if os.path.exists(legacy_target):
+        os.rename(legacy_target, target)
+        return target
+
+    candidates = [
+        f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg",
+        f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+        f"https://i.ytimg.com/vi/{video_id}/sddefault.jpg",
+    ]
+    headers = {"User-Agent": "Mozilla/5.0"}
+    for url in candidates:
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200 and len(r.content) > 1000:
+                with open(target, "wb") as f:
+                    f.write(r.content)
+                return target
+        except Exception:
+            continue
+    return None
+
+
+def ocr_thumbnail_text(image_path):
+    """썸네일 이미지에서 텍스트 OCR 추출 (macOS 네이티브 Vision)"""
+    if not image_path or not os.path.exists(image_path):
+        return ""
+    try:
+        from ocrmac import ocrmac
+        recognized = ocrmac.OCR(
+            image_path, language_preference=["ko-KR", "en-US"]
+        ).recognize()
+        # 신뢰도 0.2 이상만, 위→아래 순으로 결합
+        items = [
+            (box[1], text.strip())
+            for text, conf, box in recognized
+            if conf >= 0.2 and text.strip()
+        ]
+        items.sort(key=lambda x: -x[0])
+        return " / ".join(t for _, t in items)
+    except Exception as e:
+        print(f"  ⚠ OCR 실패 ({os.path.basename(image_path)}): {e}")
+        return ""
 
 
 # ── 채널 통계 일괄 조회 (캐시 활용) ───────────────────
@@ -426,6 +509,18 @@ def filter_viral_videos(youtube, video_ids, cache):
             ratio * 2 + relative * 2 + engagement * 100 * 1 + new_channel_bonus * 1
         )
 
+        video_age_days = max(_days_ago(v["published_at"]), 1)
+        avg_daily_views = v["view_count"] / video_age_days
+
+        if video_age_days <= 30:
+            v_type = "🔥 신규 떡상"
+        elif video_age_days <= 60:
+            v_type = "📈 중기 안정"
+        elif avg_daily_views >= 5000:
+            v_type = "🌱 후행 에버그린"
+        else:
+            v_type = "📊 일반"
+
         viral.append(
             {
                 **v,
@@ -434,6 +529,9 @@ def filter_viral_videos(youtube, video_ids, cache):
                 "relative": round(relative, 2),
                 "engagement": round(engagement, 4),
                 "channel_age_days": ch_age_days,
+                "video_age_days": video_age_days,
+                "avg_daily_views": int(avg_daily_views),
+                "type": v_type,
                 "score": round(score, 2),
             }
         )
@@ -512,7 +610,13 @@ def save_seed_pool(active_channels, candidate_channels):
 def generate_report(viral_videos, path_results):
     os.makedirs(REPORTS_DIR, exist_ok=True)
     today = datetime.now().strftime("%Y%m%d_%H%M")
-    report_path = os.path.join(REPORTS_DIR, f"[떡상스캔]_{today}.md")
+    report_path = os.path.join(REPORTS_DIR, f"[떡상 썸네일]_{today}.md")
+
+    print(f"\n[Thumbnails] 상위 {min(len(viral_videos), 50)}개 썸네일 다운로드 + OCR 중...")
+    for v in viral_videos[:50]:
+        path = download_thumbnail(v["video_id"], v.get("title", ""))
+        v["thumbnail_path"] = path
+        v["thumbnail_text"] = ocr_thumbnail_text(path) if path else ""
 
     lines = [
         f"# 떡상 영상 스캔 보고서 — {today}",
@@ -528,17 +632,85 @@ def generate_report(viral_videos, path_results):
     for path, count in path_results.items():
         lines.append(f"| {path} | {count} |")
 
-    lines += ["", f"## 떡상 영상 (총 {len(viral_videos)}개, 점수순)", ""]
-    for i, v in enumerate(viral_videos[:50], 1):
-        ch = v["channel"]
-        url = f"https://youtu.be/{v['video_id']}"
+    type_order = ["🔥 신규 떡상", "📈 중기 안정", "🌱 후행 에버그린", "📊 일반"]
+    grouped = {t: [] for t in type_order}
+    for v in viral_videos[:50]:
+        grouped.get(v.get("type", "📊 일반"), grouped["📊 일반"]).append(v)
+
+    lines += [
+        "",
+        f"## 떡상 영상 (총 {len(viral_videos)}개, 유형별 분류 + 점수순)",
+        "",
+        "> ※ 우상향 추세 검증은 VidIQ 확장의 'Views over time' 그래프로 수동 확인 권장 (상위 1·2위 후보만)",
+        "",
+    ]
+
+    type_desc = {
+        "🔥 신규 떡상": "업로드 ≤30일 — 알고리즘이 지금 밀어주는 중, 시의성 라이프사이클 짧음",
+        "📈 중기 안정": "업로드 31~60일 — 안정 트렌드",
+        "🌱 후행 에버그린": "업로드 >60일 + 일평균 조회수 5천 이상 — 장기 검색·추천 노출 가능성",
+        "📊 일반": "기타",
+    }
+
+    counter = 0
+    for t in type_order:
+        bucket = grouped[t]
+        if not bucket:
+            continue
         lines += [
-            f"### {i}. {v['title']}",
-            f"- 채널: **{ch['title']}** (구독자 {ch['subscribers']:,} / 채널 평균 {ch['avg_views']:,})",
-            f"- 조회수: **{v['view_count']:,}** (비율 {v['ratio']}배 / 채널 평균 대비 {v['relative']}배)",
-            f"- 업로드: {v['published_at'][:10]} / 길이: {v['duration_sec']//60}분 {v['duration_sec']%60}초",
-            f"- 참여도: {v['engagement']} / 채널 개설: {v['channel_age_days']}일 전 / 점수: **{v['score']}**",
-            f"- URL: {url}",
+            f"### {t} ({len(bucket)}개)",
+            f"> {type_desc[t]}",
+            "",
+        ]
+        for v in bucket:
+            counter += 1
+            ch = v["channel"]
+            url = f"https://youtu.be/{v['video_id']}"
+            thumb_fname = thumbnail_filename(v["video_id"], v.get("title", ""))
+            thumb_path = f"thumbnails/{thumb_fname}"
+            ocr_text = v.get("thumbnail_text") or "(OCR 결과 없음)"
+            lines += [
+                f"#### {counter}. {v['title']}",
+                "",
+                f"![](thumbnails/{thumb_fname})",
+                "",
+                f"- 제목: {v['title']}",
+                f"- 썸네일 문구: {ocr_text}",
+                f"- 링크: {url}",
+                f"- 업로드: {v['published_at'][:10]} ({v['video_age_days']}일 전) / 일평균 조회수 {v['avg_daily_views']:,} / 길이: {v['duration_sec']//60}분 {v['duration_sec']%60}초",
+                f"- 채널: **{ch['title']}** (구독자 {ch['subscribers']:,} / 조회수 {v['view_count']:,} / 비율 점수 {v['ratio']}배 / 상대 점수 {v['relative']}배)",
+                f"- 참여도: {v['engagement']} / 채널 개설: {v['channel_age_days']}일 전 / 점수: **{v['score']}**",
+                "",
+            ]
+
+    top_for_chrome = viral_videos[:10]
+    if top_for_chrome:
+        lines += [
+            "",
+            "---",
+            "",
+            "## 🤖 Claude in Chrome 우상향 검증 프롬프트",
+            "",
+            "> 아래 블록을 복사하여 Claude in Chrome 세션에 붙여넣으면 VidIQ 'Views over time' 그래프를 자동 검증합니다.",
+            "> 사전 조건: 브라우저에 VidIQ 무료 플랜 설치 + 로그인.",
+            "",
+            "```",
+            "다음 영상들의 VidIQ 'Views over time' 그래프(28일 또는 All)를 확인하고",
+            "각 영상의 추세를 보고해주세요.",
+            "",
+        ]
+        for i, v in enumerate(top_for_chrome, 1):
+            lines.append(
+                f"{i}. https://youtu.be/{v['video_id']} ({v['title'][:30]}... / {v['video_age_days']}일 전)"
+            )
+        lines += [
+            "",
+            "각 영상마다:",
+            "- 추세: 우상향(상승 지속) / 평탄 / 하락",
+            "- 우상향 강도: 강 / 중 / 약",
+            "- 최근 7일 일평균 조회수 (대략값)",
+            "보고해주세요.",
+            "```",
             "",
         ]
 
