@@ -679,7 +679,8 @@ def generate_report(viral_videos, path_results):
                 f"- 썸네일 문구: {ocr_text}",
                 f"- 링크: {url}",
                 f"- 업로드: {v['published_at'][:10]} ({v['video_age_days']}일 전) / 일평균 조회수 {v['avg_daily_views']:,} / 길이: {v['duration_sec']//60}분 {v['duration_sec']%60}초",
-                f"- 채널: **{ch['title']}** (구독자 {ch['subscribers']:,} / 조회수 {v['view_count']:,} / 비율 점수 {v['ratio']}배 / 상대 점수 {v['relative']}배)",
+                f"- 채널: **{ch['title']}** (구독자 {ch['subscribers']:,} / 영상수 {ch['video_count']:,} / 효율 {ch['subscribers']//max(ch['video_count'],1):,})",
+                f"- 영상 지표: 조회수 {v['view_count']:,} / 비율 점수 {v['ratio']}배 / 상대 점수 {v['relative']}배",
                 f"- 참여도: {v['engagement']} / 채널 개설: {v['channel_age_days']}일 전 / 점수: **{v['score']}**",
                 "",
             ]
