@@ -204,25 +204,43 @@ def download_thumbnail(video_id, title=""):
 
 
 def ocr_thumbnail_text(image_path):
-    """썸네일 이미지에서 텍스트 OCR 추출 (macOS 네이티브 Vision)"""
+    """썸네일 OCR — 글자 크기 기준 메인/서브 분류 후 (메인 문자열, 서브 문자열) 반환.
+
+    메인: 가장 큰 글자 박스 height의 60% 이상 → 후킹 카피 (변형 기준)
+    서브: 60% 미만 → 말풍선·부가 설명 (참고용)
+    """
     if not image_path or not os.path.exists(image_path):
-        return ""
+        return "", ""
     try:
         from ocrmac import ocrmac
         recognized = ocrmac.OCR(
             image_path, language_preference=["ko-KR", "en-US"]
         ).recognize()
-        # 신뢰도 0.2 이상만, 위→아래 순으로 결합
+        # 신뢰도 0.2 이상만 + box height 함께 보존
         items = [
-            (box[1], text.strip())
+            (box[1], text.strip(), box[3])  # (y, text, height)
             for text, conf, box in recognized
             if conf >= 0.2 and text.strip()
         ]
-        items.sort(key=lambda x: -x[0])
-        return " / ".join(t for _, t in items)
+        if not items:
+            return "", ""
+
+        # 메인/서브 분류 (글자 크기 기준)
+        max_height = max(h for _, _, h in items)
+        threshold = max_height * 0.6
+        main_items = [(y, t) for y, t, h in items if h >= threshold]
+        sub_items = [(y, t) for y, t, h in items if h < threshold]
+
+        # 위→아래 순으로 정렬 (y가 클수록 위)
+        main_items.sort(key=lambda x: -x[0])
+        sub_items.sort(key=lambda x: -x[0])
+
+        main_text = " / ".join(t for _, t in main_items)
+        sub_text = " / ".join(t for _, t in sub_items)
+        return main_text, sub_text
     except Exception as e:
         print(f"  ⚠ OCR 실패 ({os.path.basename(image_path)}): {e}")
-        return ""
+        return "", ""
 
 
 # ── 채널 통계 일괄 조회 (캐시 활용) ───────────────────
@@ -639,10 +657,15 @@ def generate_report(viral_videos, path_results):
     for v in viral_videos[:50]:
         path = download_thumbnail(v["video_id"], v.get("title", ""))
         v["thumbnail_path"] = path
-        text = ocr_thumbnail_text(path) if path else ""
-        v["thumbnail_text"] = text
-        # OCR 텍스트 기반 비지식 영상 제외
-        if text and any(kw in text for kw in EXCLUDE_THUMBNAIL_KEYWORDS):
+        if path:
+            main_text, sub_text = ocr_thumbnail_text(path)
+        else:
+            main_text, sub_text = "", ""
+        v["thumbnail_main"] = main_text
+        v["thumbnail_sub"] = sub_text
+        # OCR 메인+서브 합쳐 비지식 영상 키워드 검사
+        combined = (main_text + " " + sub_text).strip()
+        if combined and any(kw in combined for kw in EXCLUDE_THUMBNAIL_KEYWORDS):
             ocr_excluded += 1
             continue
         filtered_viral.append(v)
@@ -706,14 +729,16 @@ def generate_report(viral_videos, path_results):
             url = f"https://youtu.be/{v['video_id']}"
             thumb_fname = thumbnail_filename(v["video_id"], v.get("title", ""))
             thumb_path = f"thumbnails/{thumb_fname}"
-            ocr_text = v.get("thumbnail_text") or "(OCR 결과 없음)"
+            main_text = v.get("thumbnail_main") or "(OCR 결과 없음)"
+            sub_text = v.get("thumbnail_sub") or "(없음)"
             lines += [
                 f"#### {counter}. {v['title']}",
                 "",
                 f"![](thumbnails/{thumb_fname})",
                 "",
                 f"- 제목: {v['title']}",
-                f"- 썸네일 문구: {ocr_text}",
+                f"- 썸네일 문구 (메인): {main_text}",
+                f"- 썸네일 문구 (서브): {sub_text}",
                 f"- 링크: {url}",
                 f"- 업로드: {v['published_at'][:10]} ({v['video_age_days']}일 전) / 일평균 조회수 {v['avg_daily_views']:,} / 길이: {v['duration_sec']//60}분 {v['duration_sec']%60}초",
                 f"- 채널: **{ch['title']}** (구독자 {ch['subscribers']:,} / 영상수 {ch['video_count']:,} / 영상당 구독자 {ch['subscribers']//max(ch['video_count'],1):,})",
@@ -766,7 +791,8 @@ def generate_report(viral_videos, path_results):
         "> ![](thumbnails/{제목}_{video_id}.jpg)",
         "> ",
         "> **제목:** ...",
-        "> **썸네일 문구:** ...",
+        "> **썸네일 문구 (메인):** ... (변형 기준)",
+        "> **썸네일 문구 (서브):** ... (참고용)",
         "> **링크:** https://youtu.be/...",
         "> **업로드:** YYYY-MM-DD (N일 전) / 일평균 조회수 N / 길이 N분 N초",
         "> **채널:** {채널명} (구독자 N / 영상수 N / 조회수 N / 구독자 대비 N배 / 평균 대비 N배)",
