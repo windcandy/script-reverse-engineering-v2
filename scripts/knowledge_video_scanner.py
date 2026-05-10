@@ -63,17 +63,38 @@ CATEGORIES = {
     "22": "인물블로그",
 }
 
-# 제외 필터 — 본 채널은 지식 집중 채널이므로 뉴스·정치·연예 제외
+# 제외 필터 — 본 채널은 지식 집중 채널이므로 뉴스·정치·연예·브랜드·게임·드라마 제외
 EXCLUDE_CHANNEL_KEYWORDS = [
+    # 뉴스·방송
     "MBC", "KBS", "SBS", "JTBC", "TV조선", "채널A", "YTN", "MBN",
     "연합뉴스", "뉴시스", "노컷뉴스", "뉴스TV", "NEWS", "News",
     "방송국", "뉴스데스크", "방송",
+    # 정치
     "정치 돌직구", "정치를", "민주네집",
+    # 기업·브랜드
+    "은행", "카드사", "보험", "증권", "통신",
+    "공식 딜러", "BMW", "현대", "기아", "테슬라",
+    # 게임·로블록스
+    "로블록스",
 ]
 EXCLUDE_TITLE_KEYWORDS = [
+    # 정치 인물·기관
     "윤석열", "이재명", "김건희", "한동훈", "민주당", "국민의힘",
     "검찰", "대통령실",
+    # 연예
     "먹방", "예능", "아이돌",
+    # 예능 후킹
+    "참교육", "대리뷰", "탐방",
+    # 게임
+    "진엔딩", "공략법", "쿠키영상", "PRAGMATA",
+    # 영화·드라마 (특수문자로 표시되는 작품 표기는 별도 처리)
+    "≪", "≫",
+]
+# OCR 썸네일 문구 기반 제외 — 명백한 비지식 신호만 (false positive 방지 위해 보수적)
+EXCLUDE_THUMBNAIL_KEYWORDS = [
+    "참교육", "대리뷰", "먹방", "광팬", "사모곡",
+    "엔딩", "진엔딩", "쿠키영상", "공략법",
+    "ㅋㅋ", "ㅎㅎ",
 ]
 
 # 키워드 폭격 풀 (지식 영상 패턴)
@@ -613,10 +634,21 @@ def generate_report(viral_videos, path_results):
     report_path = os.path.join(REPORTS_DIR, f"[떡상 썸네일]_{today}.md")
 
     print(f"\n[Thumbnails] 상위 {min(len(viral_videos), 50)}개 썸네일 다운로드 + OCR 중...")
+    ocr_excluded = 0
+    filtered_viral = []
     for v in viral_videos[:50]:
         path = download_thumbnail(v["video_id"], v.get("title", ""))
         v["thumbnail_path"] = path
-        v["thumbnail_text"] = ocr_thumbnail_text(path) if path else ""
+        text = ocr_thumbnail_text(path) if path else ""
+        v["thumbnail_text"] = text
+        # OCR 텍스트 기반 비지식 영상 제외
+        if text and any(kw in text for kw in EXCLUDE_THUMBNAIL_KEYWORDS):
+            ocr_excluded += 1
+            continue
+        filtered_viral.append(v)
+    if ocr_excluded:
+        print(f"  → OCR 기반 추가 제외: {ocr_excluded}개")
+    viral_videos = filtered_viral
 
     lines = [
         f"# 떡상 영상 스캔 보고서 — {today}",
