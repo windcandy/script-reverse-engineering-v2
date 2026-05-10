@@ -76,6 +76,8 @@ EXCLUDE_CHANNEL_KEYWORDS = [
     "공식 딜러", "BMW", "현대", "기아", "테슬라",
     # 게임·로블록스
     "로블록스",
+    # 심리 (본 채널 톤 외)
+    "심리",
 ]
 EXCLUDE_TITLE_KEYWORDS = [
     # 정치 인물·기관
@@ -89,6 +91,8 @@ EXCLUDE_TITLE_KEYWORDS = [
     "진엔딩", "공략법", "쿠키영상", "PRAGMATA",
     # 영화·드라마 (특수문자로 표시되는 작품 표기는 별도 처리)
     "≪", "≫",
+    # 심리·뇌과학 (본 채널 톤 외)
+    "뇌과학", "심리학",
 ]
 # OCR 썸네일 문구 기반 제외 — 명백한 비지식 신호만 (false positive 방지 위해 보수적)
 EXCLUDE_THUMBNAIL_KEYWORDS = [
