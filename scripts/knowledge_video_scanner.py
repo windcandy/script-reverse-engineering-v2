@@ -47,8 +47,8 @@ with open(os.path.join(API_DIR, "youtube_api_key.json")) as f:
 
 
 # ── Config: 떡상 신호 기준 ─────────────────────────────
-SUBSCRIBER_MIN = 10_000        # 신규 채널 하한 (1만)
-SUBSCRIBER_MAX = 300_000       # 소형 채널 상한 (30만)
+SUBSCRIBER_MIN = 10_000        # 채널 하한 (1만 미만 제외)
+SUBSCRIBER_LARGE = 300_000     # 대형 채널 임계값 (30만 초과는 별도 섹션 분류)
 RATIO_THRESHOLD = 5.0          # 비율(조회수/구독자) 5배 이상
 RELATIVE_THRESHOLD = 5.0       # 채널 평균 대비 5배 이상
 ABSOLUTE_VIEW_MIN = 50_000     # 절대 조회수 5만 이상
@@ -512,8 +512,8 @@ def filter_viral_videos(youtube, video_ids, cache):
             continue
         if v["view_count"] < ABSOLUTE_VIEW_MIN:
             continue
-        if not (SUBSCRIBER_MIN <= ch["subscribers"] <= SUBSCRIBER_MAX):
-            continue
+        if ch["subscribers"] < SUBSCRIBER_MIN:
+            continue  # 1만 미만 제외 (대형은 통과 — 별도 섹션 분류)
 
         # 제외 필터 (뉴스·정치·연예)
         ch_title = ch.get("title", "")
@@ -551,7 +551,9 @@ def filter_viral_videos(youtube, video_ids, cache):
         video_age_days = max(_days_ago(v["published_at"]), 1)
         avg_daily_views = v["view_count"] / video_age_days
 
-        if video_age_days <= 30:
+        if ch["subscribers"] > SUBSCRIBER_LARGE:
+            v_type = "🏢 대형 채널"  # 30만 초과 — 별도 섹션
+        elif video_age_days <= 30:
             v_type = "🔥 신규 떡상"
         elif video_age_days <= 60:
             v_type = "📈 중기 안정"
@@ -693,7 +695,7 @@ def generate_report(viral_videos, path_results):
 
     lines = []  # 임시 — 떡상 영상 리스트 작성용
 
-    type_order = ["🔥 신규 떡상", "📈 중기 안정", "🌱 후행 에버그린", "📊 일반"]
+    type_order = ["🔥 신규 떡상", "📈 중기 안정", "🌱 후행 에버그린", "📊 일반", "🏢 대형 채널"]
     grouped = {t: [] for t in type_order}
     for v in viral_videos[:50]:
         grouped.get(v.get("type", "📊 일반"), grouped["📊 일반"]).append(v)
@@ -711,6 +713,7 @@ def generate_report(viral_videos, path_results):
         "📈 중기 안정": "업로드 31~60일 — 안정 트렌드",
         "🌱 후행 에버그린": "업로드 >60일 + 일평균 조회수 5천 이상 — 장기 검색·추천 노출 가능성",
         "📊 일반": "기타",
+        "🏢 대형 채널": "구독자 30만 초과 — 본 채널 재현성 낮아 변형 분석 대상에서 제외 (참고용)",
     }
 
     counter = 0
