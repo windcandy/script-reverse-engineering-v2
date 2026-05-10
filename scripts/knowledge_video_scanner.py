@@ -678,7 +678,7 @@ def generate_report(viral_videos, path_results):
         "",
         "> 신규/소형 채널(구독자 1만~30만) 떡상 영상 발굴 결과",
         f"> 임계값: 구독자 대비 ≥ {RATIO_THRESHOLD}배 / 평균 대비 ≥ {RELATIVE_THRESHOLD}배 / 조회수 ≥ {ABSOLUTE_VIEW_MIN:,}",
-        "> 워크플로우: `지침/P0_키워드발굴.md` 방식 C 실행 절차(7단계) 참조",
+        "> 워크플로우: `지침/P0_키워드발굴.md` 방식 C 실행 절차(6단계) 참조",
         "",
     ]
 
@@ -781,7 +781,7 @@ def generate_report(viral_videos, path_results):
     analysis_placeholder = [
         "## 변형 분석 (메인 클로드 작성 영역)",
         "",
-        "> 본 섹션은 메인 클로드가 P0 방식 C 3~6단계에서 작성한다.",
+        "> 본 섹션은 메인 클로드가 P0 방식 C 3~5단계에서 작성한다.",
         "> 후보별로 4단계 분석 + 5가지 감정 방향(충격/궁금증/비교/다큐/사회문화)별 5개씩 = 25개 변형 + 추천 조합 3개 기록.",
         "> 작성 양식 예시:",
         ">",
