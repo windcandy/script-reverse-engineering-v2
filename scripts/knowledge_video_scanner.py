@@ -650,20 +650,25 @@ def generate_report(viral_videos, path_results):
         print(f"  → OCR 기반 추가 제외: {ocr_excluded}개")
     viral_videos = filtered_viral
 
-    lines = [
+    header_lines = [
         f"# 떡상 영상 스캔 보고서 — {today}",
         "",
         "> 신규/소형 채널(구독자 1만~30만) 떡상 영상 발굴 결과",
         f"> 임계값: 구독자 대비 ≥ {RATIO_THRESHOLD}배 / 평균 대비 ≥ {RELATIVE_THRESHOLD}배 / 조회수 ≥ {ABSOLUTE_VIEW_MIN:,}",
         "> 워크플로우: `지침/P0_키워드발굴.md` 방식 C 실행 절차(7단계) 참조",
         "",
+    ]
+
+    collect_lines = [
         "## 경로별 수집 현황",
         "",
         "| 경로 | 후보 영상 수 |",
         "|---|---|",
     ]
     for path, count in path_results.items():
-        lines.append(f"| {path} | {count} |")
+        collect_lines.append(f"| {path} | {count} |")
+
+    lines = []  # 임시 — 떡상 영상 리스트 작성용
 
     type_order = ["🔥 신규 떡상", "📈 중기 안정", "🌱 후행 에버그린", "📊 일반"]
     grouped = {t: [] for t in type_order}
@@ -717,12 +722,12 @@ def generate_report(viral_videos, path_results):
                 "",
             ]
 
+    viral_list_lines = list(lines)  # 지금까지 작성된 떡상 영상 리스트 보존
+    lines = []
+    chrome_lines = []
     top_for_chrome = viral_videos[:10]
     if top_for_chrome:
-        lines += [
-            "",
-            "---",
-            "",
+        chrome_lines = [
             "## 🤖 Claude in Chrome 우상향 검증 프롬프트",
             "",
             "> 아래 블록을 복사하여 Claude in Chrome 세션에 붙여넣으면 VidIQ 'Views over time' 그래프를 자동 검증합니다.",
@@ -734,10 +739,10 @@ def generate_report(viral_videos, path_results):
             "",
         ]
         for i, v in enumerate(top_for_chrome, 1):
-            lines.append(
+            chrome_lines.append(
                 f"{i}. https://youtu.be/{v['video_id']} ({v['title'][:30]}... / {v['video_age_days']}일 전)"
             )
-        lines += [
+        chrome_lines += [
             "",
             "각 영상마다:",
             "- 추세: 우상향(상승 지속) / 평탄 / 하락",
@@ -748,14 +753,11 @@ def generate_report(viral_videos, path_results):
             "",
         ]
 
-    lines += [
-        "",
-        "---",
-        "",
+    analysis_placeholder = [
         "## 변형 분석 (메인 클로드 작성 영역)",
         "",
         "> 본 섹션은 메인 클로드가 P0 방식 C 5~6단계에서 작성한다.",
-        "> 후보별로 변형 가제 3안 + 역추출 주제 + 서사 유형 + 가중치 점수를 표로 기록.",
+        "> 후보별로 변형 가제 3안 + 역추출 주제 + 서사 유형 + 가중치 점수 + 전체 순위를 표로 기록.",
         "> 작성 양식 예시:",
         ">",
         "> ```",
@@ -764,19 +766,30 @@ def generate_report(viral_videos, path_results):
         "> **썸네일 문구:** ...",
         "> **링크:** ...",
         "> ",
-        "> | 변형 | 가제 | 썸네일 문구 | 역추출 주제 | 서사 유형 | 점수 |",
-        "> |---|---|---|---|---|---|",
-        "> | 욕구 | (15~30자 제목) | (5~15자 후킹) | ... | ... | ... |",
-        "> | 주체 | (15~30자 제목) | (5~15자 후킹) | ... | ... | ... |",
-        "> | 시점 | (15~30자 제목) | (5~15자 후킹) | ... | ... | ... |",
+        "> 신호 강도 = max(구독자 대비, 평균 대비) = N배 / 구독자 N만 (N구간) → 강신호 보너스 +N",
+        "> ",
+        "> | 변형 | 가제 | 썸네일 문구 | 역추출 주제 | 서사 유형 | 기본 | 강신호 보너스 | 최종 | 전체 순위 |",
+        "> |---|---|---|---|---|---|---|---|---|",
+        "> | 욕구 | (15~30자 제목) | (5~15자 후킹) | ... | ... | N | +N | **N** | **N위** |",
+        "> | 주체 | (15~30자 제목) | (5~15자 후킹) | ... | ... | N | +N | **N** | **N위** |",
+        "> | 시점 | (15~30자 제목) | (5~15자 후킹) | ... | ... | N | +N | **N** | **N위** |",
         "> ```",
         "",
         "_(메인 클로드가 분석 후 본 영역을 채웁니다)_",
         "",
     ]
 
+    final_lines = (
+        header_lines
+        + analysis_placeholder
+        + ["---", ""]
+        + collect_lines
+        + viral_list_lines
+        + (["---", ""] + chrome_lines if chrome_lines else [])
+    )
+
     with open(report_path, "w") as f:
-        f.write("\n".join(lines))
+        f.write("\n".join(final_lines))
     print(f"\n📄 보고서 저장: {report_path}")
     return report_path
 
