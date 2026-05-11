@@ -17,12 +17,46 @@
       "Bash(python3 /tmp/analyze_scripts.py)",
       "Bash(python3 -c ' *)",
       "Bash(ls \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/\"*분석*)",
-      "Bash(awk '/^### 0\\\\.6/,/^###[^0]/' \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/지침/00_공통_원칙.md\")"
+      "Bash(awk '/^### 0\\\\.6/,/^###[^0]/' \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/지침/00_공통_원칙.md\")",
+      "Bash(ls *모순*)",
+      "Bash(ls 11_*)",
+      "Bash(git status *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "WebFetch(domain:socialblade.com)",
+      "Bash(curl -s \"https://www.youtube.com/@knowledgebrunch\")",
+      "Bash(curl -s \"https://www.youtube.com/@studio_pirates\")",
+      "Bash(curl -s \"https://www.youtube.com/@%EC%A7%80%EC%8B%9D%ED%95%9C%EC%9E%85\")",
+      "Bash(curl -s \"https://www.youtube.com/@dangmolee\")",
+      "Bash(curl -s \"https://www.youtube.com/feeds/videos.xml?channel_id=UCQ-nbZu4ZdEl-8ZRgsS7Nag\")",
+      "Bash(curl -s \"https://www.youtube.com/feeds/videos.xml?channel_id=UCcYk_KPZZMLv_bcaSAWSSxA\")",
+      "Bash(curl -s \"https://www.youtube.com/feeds/videos.xml?channel_id=UC9cCBxBAQW2CzLYeT20q49A\")",
+      "Bash(curl -s \"https://www.youtube.com/feeds/videos.xml?channel_id=UCi9Sl8GnFdYoqEVXnojBPJw\")",
+      "Bash(python3 scripts/keyword_search.py)",
+      "Bash(mkdir -p \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/대본/006_판소리/히스토리\")",
+      "Bash(mv \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/대본/006_판소리/[대본] 판소리_20260504_193500.md\" \"/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/대본/006_판소리/히스토리/\")",
+      "Bash(mv \"[대본] 판소리_20260504_203000.md\" \"히스토리/\")",
+      "Bash(cp \"히스토리/[대본] 판소리_20260504_203000.md\" \"[대본] 판소리_20260504_210000.md\")",
+      "Bash(cat)",
+      "Bash(chmod +x /tmp/extract_titles.sh)",
+      "Bash(/tmp/extract_titles.sh)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c \"import sys; print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 14.txt'\\).read\\(\\)[-2000:]\\)\")",
+      "Bash(python3 -c \"import sys; print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 19.txt'\\).read\\(\\)[-2000:]\\)\")",
+      "Bash(python3 -c \"import sys; print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 23.txt'\\).read\\(\\)[-2000:]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 25.txt'\\).read\\(\\)[-2500:]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 26.txt'\\).read\\(\\)[:1500]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 모순형/대본 26.txt'\\).read\\(\\)[-2500:]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 이미지강화형/지식해적단 대본 02.txt'\\).read\\(\\)[-2200:]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 이미지강화형/지식해적단 대본 05.txt'\\).read\\(\\)[-2200:]\\)\")",
+      "Bash(python3 -c \"print\\(open\\('/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본/[대본] 이미지강화형/지식해적단 대본 07.txt'\\).read\\(\\)[-2200:]\\)\")"
     ],
     "additionalDirectories": [
       "/Users/hyungilnam/.claude",
       "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/[추출] 대본 - 분석",
-      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/00_지식파일"
+      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/00_지식파일",
+      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/대본",
+      "/Users/hyungilnam/클로드 AI 어시스턴트/[이거봐봐] 퀵리서치 후 제목:썸네일/대본/004_판소리"
     ]
   }
 }
