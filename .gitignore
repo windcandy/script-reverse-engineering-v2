@@ -5,3 +5,4 @@ API/
 scripts/.scanner_cache.json
 scripts/.ocr_cache.json
 scripts/__pycache__/
+시뮬레이션/
